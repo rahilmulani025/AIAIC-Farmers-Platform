@@ -1,246 +1,174 @@
-# Farmer's Friend Dashboard
+# AIAIC MP & MH Farmer Interface & Decision Dashboard
 
-the task : Rahil + Rhugved — AIAIC MP Farmer Interface & Decision Dashboard (AIAIC – Current Task) READ THIS FIRST. Paste this entire task into your preferred GPT/LLM before doing anything else. Your GPT must help you execute this task, ask only delivery-relevant questions, and convert this assignment into an execution plan. Your responsibility is to turn the emerging AIAIC intelligence into a simple, usable, real-data farmer-facing interface. Hemanth owns runtime/integration; Kaushlendra owns intelligence/ML. You own the user experience and frontend delivery. PHASE 1 — LEARN Review the existing AIAIC frontend, APIs, response schemas, available real datasets and current recommendation flows. Identify the minimum screens required for the MP PoC. Do not invent workflows that the backend cannot support. PHASE 2 — DESIGN Design a very simple farmer-first experience usable by:
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue.svg)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-19.2-blue.svg)](https://react.dev/)
+[![TanStack Start](https://img.shields.io/badge/TanStack--Start-1.168-orange.svg)](https://tanstack.com/router)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind--CSS-v4.2-38bdf8.svg)](https://tailwindcss.com/)
 
-first-time smartphone users
+A simple, intuitive, real-data farmer-facing mobile web interface for the **AIAIC (AI Agricultural Intelligence Center) Decision Engine**. Designed specifically for smartphone-using farmers in **Madhya Pradesh (MP)** and **Maharashtra (MH)** — prioritizing accessibility for first-time smartphone users, limited technical literacy, and 50+ year-old users.
 
-farmers with limited technical literacy
+---
 
-50+ year-old users Prioritize:
+## 🌟 Key Features & Highlights
 
-large readable text
+- **🌾 Farmer-First UX & Accessibility**:
+  - Large readable text with high-contrast UI.
+  - Extra-large tap targets (**56px+ height**) designed for easy touch navigation.
+  - Clean Devanagari typography using Google Fonts (**Baloo 2** for headings and **Mukta** for body).
+- **🌐 Tri-Lingual Support (EN / HI / MR)**:
+  - Instant toggle between **English**, **Hindi (हिंदी)**, and **Marathi (मराठी)**.
+  - Complete context-aware dictionary translation with persistent user preference storage.
+- **🔊 Text-to-Speech (Voice Synthesis)**:
+  - Integrated browser Web Speech API (`use-speech.ts`) enabling one-tap audio read-out of recommendations for low-literacy users.
+- **📊 Visual Confidence Gauge**:
+  - Replaces confusing percentage metrics with a simple 3-stage visual meter (**High / Medium / Low / Abstain**) and plain words.
+- **⚠️ Strict Honesty & Uncalibrated Warnings**:
+  - Prominent disclaimer banners on every decision card: _"Uncalibrated illustrative defaults — demonstration of operation on real evidence, NOT farmer-ready advice."_
+  - Honest presentation of engine abstentions (`recommendation: "ABSTAIN"`), missing evidence, and known unknowns.
+- **📸 Plant Health Inspection**:
+  - Photo diagnostic checker (`PlantCheck.tsx`) allowing farmers to upload leaf/plant photos to receive objective observations.
 
-obvious actions
+---
 
-minimal navigation
+## 📍 Supported Regions & Commodities
 
-Marathi/Hindi/English-ready structure
+### Supported Regions
 
-simple terminology
+- **Madhya Pradesh (MP)**: Bhopal, Indore, Ujjain, Sagar, Jabalpur, Gwalior, Dewas, Dhar, Khargone, Ratlam, Chhindwara, Rewa, Sehore, Raisen, Vidisha, Narmadapuram, Mandsaur, Neemuch, Satna, Morena.
+- **Maharashtra (MH)**: Pune, Nashik, Ahmednagar, Latur, Beed, Yavatmal, Kolhapur, Nagpur, Solapur, Amravati, Akola, Sangli, Satara, etc. (all 36 districts).
 
-clear status indicators
+### Supported Commodities
 
-visual explanations rather than technical data dumps
+- Soybean, Wheat, Onion, Tomato, Potato, Cotton, Gram, Tur, Sugarcane, Maize, Bajra, Jowar, Banana, Mango, Grapes, Pomegranate, Chilli, Groundnut, Garlic, Ginger, etc.
 
-accessibility and responsive mobile-first behaviour The interface must explain uncertainty clearly. Never present an illustrative or uncalibrated recommendation as a guaranteed agricultural instruction. PHASE 3 — BUILD Build the production-quality frontend using the existing AIAIC stack and reusable BHIV UI capabilities where available. Core PoC flow: Farmer / operator → location / land / crop information → available water/weather/plant/market intelligence → recommendation → simple explanation → evidence/source → confidence/limitations → next action Create only the screens required to demonstrate this complete flow. PHASE 4 — INTEGRATE Work directly with Hemanth against the live API contracts. Use real API responses wherever available. Handle:
+---
 
-loading
+## 📱 User Flow & Application Screens
 
-empty data
+| Route                                | Purpose                                                                                                                                                  | Key Components                                              |
+| :----------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------- |
+| **`/` (Landing)**                    | Language choice, saved farm shortcut, project mission, and honest demonstration disclaimer.                                                              | `LanguageSwitcher`, `BigSelect`, `StateBlock`               |
+| **`/ask` (Data Entry)**              | Accessible form to select district, crop, land size, water access, and plant photo upload.                                                               | `BigSelect`, `PlantCheck`                                   |
+| **`/result` (Decision Overview)**    | Multi-service dashboard displaying recommendation cards for Market, Weather, Water, Crop Care, and Storage.                                              | `RecommendationCard`, `ConfidenceMeter`, `DashboardSummary` |
+| **`/advice/$service` (Detail View)** | Deep-dive decision page featuring plain-language explanation, APMC mandi price comparisons, official evidence sources, known unknowns, and action steps. | `EvidenceCard`, `AdviceActions`, `FeedbackBlock`            |
+| **`/review` (Intelligence Review)**  | Full regional intelligence overview summarizing all services for selected district/crop.                                                                 | `StateBlock`, `DashboardSummary`                            |
 
-unavailable service
+---
 
-incomplete evidence
+## 🛠️ Technology Stack
 
-low confidence
+- **Core Framework**: [React 19](https://react.dev) + [TanStack Start](https://tanstack.com/router) (SSR) & [TanStack Router](https://tanstack.com/router)
+- **Build System**: [Vite 8](https://vitejs.dev/) + [Nitro Engine](https://nitro.unjs.io/)
+- **Styling**: [Tailwind CSS v4](https://tailwindcss.com/) + [Radix UI](https://www.radix-ui.com/) + [Lucide React Icons](https://lucide.dev/)
+- **State & Data Fetching**: [TanStack React Query v5](https://tanstack.com/query)
+- **Localization**: Custom Typed Context (`src/lib/i18n.tsx`) + Web Speech API (`src/lib/use-speech.ts`)
+- **Database/Auth Integration**: Supabase Client (`@supabase/supabase-js`)
 
-failed request
+---
 
-stale data
+## 🔌 Live Backend API Integration
 
-unsupported location/crop No hardcoded recommendation values masquerading as live intelligence. PHASE 5 — TEST Test the UI on mobile and desktop. Validate the complete real-data flow and capture screenshots of:
+The frontend connects directly to the live AIAIC Decision Engine API:
 
-landing/input experience
+- **Base URL**: `https://disarm-scrubbed-pushiness.ngrok-free.dev`
+- **Required Header**: `ngrok-skip-browser-warning: true`
+- **Key Endpoints**:
+  - `GET /intelligence/{service}?region={district}&crop={crop}&limit=1`
+  - `GET /intelligence/unified?limit=5`
+  - `GET /catalog` (5-minute server-side cached catalog)
+  - `GET /docs` & `GET /openapi.json`
 
-farmer data entry
+> **Server Proxy Architecture**: All backend calls route through server functions (`src/lib/aiaic.functions.ts`). The browser client never touches ngrok or CORS headers directly, keeping API keys and tunnel logic secure on the server.
 
-intelligence result
+---
 
-recommendation explanation
+## 🚀 Getting Started & Local Development
 
-evidence/source
+### Prerequisites
 
-error/uncertainty state
+- **Node.js**: v18.0.0 or higher
+- **Package Manager**: `npm` (or `bun`)
 
-responsive/mobile view Conduct a usability pass specifically asking whether a non-technical farmer can understand what to do without external instruction. PHASE 6 — DOCUMENT + HANDOVER Deliver:
+### Setup Instructions
 
-frontend implementation
+1. **Clone the Repository**:
 
-reusable components
+   ```bash
+   git clone <repository-url>
+   cd farmer-s-friend-dashboard-main
+   ```
 
-design decisions
+2. **Install Dependencies**:
 
-responsive layouts
+   ```bash
+   npm install
+   ```
 
-API integration notes
+3. **Start Local Development Server**:
 
-supported states
+   ```bash
+   npm run dev
+   ```
 
-screenshots
+   Open your browser at `http://localhost:3000` (or `http://localhost:5173`).
 
-short demo video
+4. **Verify TypeScript Type Safety**:
 
-REVIEW_PACKET
+   ```bash
+   npx tsc --noEmit
+   ```
 
-focused /code_packet/
+5. **Lint and Format Code**:
 
-evidence_packet/
+   ```bash
+   npm run lint
+   npm run format
+   ```
 
-handover notes REVIEW_PACKET must contain only the focused files necessary to review the implementation, not the entire repository. NON-GOALS Do not redesign AIAIC architecture. Do not create a second backend. Do not invent intelligence. Do not hardcode production decisions. Do not turn the dashboard into a technical command centre. Do not expose unnecessary internal BHIV/TANTRA complexity to farmers. SUCCESS CONDITION A real AIAIC recommendation generated from real evidence can be presented through a simple interface that a farmer can understand and act upon without technical training. In runtime this means: Real farmer input → real AIAIC intelligence → simple recommendation → explanation → evidence → clear next action.
+6. **Build for Production**:
+   ```bash
+   npm run build
+   npm run preview
+   ```
 
-this is the next task given to me , go through it properly and tell me what its about what we have to do what are the things which will be required to complete this .
+---
 
-This is about building a farmer-facing mobile app for Madhya Pradesh.
+## 📁 Repository Structure
 
-The context: AIAIC is an AI system that gives agricultural recommendations to farmers — what crop to plant, when to irrigate, what the market price looks like, weather warnings, etc. Right now that intelligence exists in a backend but there is no simple interface for a farmer to use it.
-
-Your job: build the frontend that a farmer in MP can actually use.
-
-Not a technical dashboard. Not a command center. A simple, large-text, Hindi/Marathi-ready mobile screen that a 55-year-old farmer with a basic smartphone can understand without anyone teaching him.
-
-The 6 phases broken down simply
-
-Phase 1 — Learn (do this first, before building anything)
-
-You need to talk to Hemanth (he owns runtime/integration) and Kaushlendra (he owns the ML/intelligence). Ask them:
-
-What APIs exist?
-
-What does a real recommendation response look like?
-
-What real datasets are available (weather, water, market prices, plant data)?
-
-What locations and crops are currently supported?
-
-Do not build anything until you know what the backend can actually give you.
-
-Phase 2 — Design
-
-Design screens that a farmer can understand. The brief is very specific about this:
-
-Large text
-
-Obvious buttons
-
-Marathi/Hindi/English support
-
-No technical jargon
-
-Show confidence levels clearly (never pretend a recommendation is guaranteed)
-
-Visual explanations, not data tables
-
-Phase 3 — Build
-
-Build these specific screens:
-
-Landing / Input — farmer enters location, land size, crop type
-
-Intelligence view — weather, water, market data shown simply
-
-Recommendation — what the AI suggests, in plain language
-
-Explanation — why it is suggesting this
-
-Evidence/Source — where the data came from
-
-Confidence/Limitations — how sure the AI is, what it does not know
-
-Next Action — one clear thing the farmer should do now
-
-Phase 4 — Integrate
-
-Connect every screen to Hemanth's live APIs. No hardcoded values. Handle every failure state — loading, no data, service down, low confidence, unsupported location.
-
-Phase 5 — Test
-
-Test on mobile. Take screenshots of every screen including error states. Do a usability check: can a non-technical person understand what to do without help?
-
-Phase 6 — Document
-
-Deliver frontend code, components, design decisions, API integration notes, screenshots, demo video, and the documentation package.
-
-What you own vs what others own
-
-Person Responsibility You (Rahil) Frontend, UX, farmer interface, all screens Rhugved Collaborating on frontend (check with him on split) Hemanth Backend APIs, runtime, live data integration Kaushlendra ML models, intelligence, recommendation logic
-
-You do not touch the backend. You do not invent recommendations. You only build the screen that shows what the backend gives you.
-
-What you need before you can build anything
-
-From Hemanth (message him today):
-
-Base URL of the AIAIC API
-
-What endpoint gives a recommendation (method, params, response shape)
-
-What endpoint gives weather data for a location
-
-What endpoint gives market prices
-
-What locations/crops are currently supported
-
-Sample real API responses (even just JSON examples)
-
-Any authentication needed
-
-From Kaushlendra (message him today):
-
-What does a recommendation object look like in JSON?
-
-What confidence fields are returned?
-
-What explanation fields are returned?
-
-What evidence/source fields are returned?
-
-What does a low-confidence response look like?
-
-What does an unsupported location response look like?
-
-From Rhugved (message him today):
-
-What is the existing AIAIC frontend stack? (React? Vue? Native?)
-
-What reusable components already exist?
-
-How do you split the work between the two of you?
-
-What I can start building right now (before APIs arrive)
-
-Even before Hemanth sends the API docs, I can build:
-
-The complete UI skeleton — all 7 screens with the correct layout, large text, Hindi/Marathi text strings, mobile-first responsive design
-
-All the loading, empty, error, and low-confidence states — these are purely frontend
-
-The language switcher — English/Hindi/Marathi toggle
-
-The farmer input form — location, land size, crop type
-
-The recommendation display components — confidence indicator, evidence cards, next action button
-
-The design system — large text scale, accessible colors, mobile touch targets
-
-The moment Hemanth sends the API response shape, I wire the real data in. The skeleton becomes live in hours.
-
-The single most important design principle
-
-The brief says this explicitly and it is the core of the whole project:
-
-"Never present an illustrative or uncalibrated recommendation as a guaranteed agricultural instruction."
-
-This means every recommendation must show:
-
-How confident the AI is (as a simple visual — not a percentage, a farmer cannot process that)
-
-What it does not know
-
-That this is a suggestion, not a guaranteed instruction
-
-If you get this wrong, a farmer could make a bad decision based on a guess that looked like a fact. That is the failure condition the brief is designed to prevent.
-
-This is what hemant provided me , go through it and tell me what are the other things needed , and about rhugved he is working on another project so i will be doing the whole frontend part and if i need any help i can ask him for .
-
-AQIAIC live API — base URL, recommendation endpoint, sample, supported crops/locations Everything you need below. Note: the platform is UNCALIBRATED — a real-data demonstration, not farmer-ready advice. Every item carries its confidence, sources, and abstentions; render those honestly. Base URL (live, ngrok): https://disarm-scrubbed-pushiness.ngrok-free.dev ⚠️ Send the header ngrok-skip-browser-warning: true on every request, or ngrok returns an HTML page instead of JSON. Interactive docs + full schema: GET /docs · machine-readable: GET /openapi.json. Recommendation endpoints: GET /intelligence/{service}?region=&crop=&limit= — service ∈ market | water | weather | crop | storage GET /intelligence/unified?limit= — all services combined Sample real response — GET /intelligence/market?limit=1: { "recommendation": "SELL_AT_MANDI", "confidence": "high", "recommendation_detail": "Sell at the best-net mandi today", "abstained": false, "subject": { "crop": "mango", "region": "Sangli" }, "sources_used": [{ "source_id": "agmarknet_daily_prices", "source_name": "Agmarknet — Variety-wise Daily Market Prices (Mandi)", "signal": "market", "tier": "primary_official", "observed_at": "2026-06-06T00:00:00", "freshness": "fresh", "license": "GODL-India", "synthetic": false, "source_url": "https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070" }], "explainability": [ "Of the options today, Chattrapati Sambhajinagar APMC pays the most net of transport and fees — about ₹16750/quintal. The spread between best and worst mandi is about ₹5750/quintal, so where you sell matters.", "3. decision:mandi_net: net realisable by mandi: Chattrapati Sambhajinagar APMC=₹16750, Kolhapur APMC=₹15000, Nasik APMC=₹14000 …" ], "known_unknowns": [ "Engine runs on UNCALIBRATED illustrative defaults — demonstration of operation on real evidence, NOT farmer-ready advice." ], "supporting_evidence": { "decision_id": "dec_…", "confidence_score": 0.… }, "calibrated": false, "decision_id": "dec_…" } (Abbreviated — call the endpoint or see /docs for the exact full object. Every item has these fields: recommendation, confidence, recommendation_detail, abstained, subject, best/average/worst_case, explainability[], known_unknowns[], supporting_evidence, sources_used[], calibrated, decision_id. An abstention comes back as recommendation: "ABSTAIN" with its reason — show it as-is, never as advice.) Currently supported (real data, Maharashtra): Market & Storage: ~90 commodities (onion, tomato, soybean, mango, cotton, tur/chana, banana, chilli, wheat, potato, …) across the state's APMC mandis (~117 markets). Caveat: prices are currently a single-day snapshot (2026-06-06); a deeper history is being ingested. Water / Weather / Crop intelligence: the 36 Maharashtra districts (Pune, Nashik, Ahmednagar, Latur, Beed, Yavatmal, … — plus taluka granularity for water/groundwater), evaluated for water-intensive crops (e.g. sugarcane). region accepts a district (e.g. region=Latur) and crop a commodity (e.g. crop=onion); omit them to get everything, use limit to cap. Ping me if you need a field added or want me to keep the tunnel up for a testing window — I'll leave the backend + ngrok running.
-
-## Development
-
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
-
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
 ```
+.
+├── docs/
+│   ├── REVIEW_PACKET.md         # Focused code & architecture review package
+│   ├── HANDOVER.md              # Complete developer handover notes & design choices
+│   ├── DEMO-SCRIPT.md           # 5-minute walkthrough script for review demos
+│   └── evidence_packet/         # Verified UI screenshots across all 7 flow states
+├── src/
+│   ├── components/farm/         # Reusable farmer UI components (ConfidenceMeter, BigSelect, etc.)
+│   ├── components/ui/           # Radix/Shadcn primitives (button, card, dialog, badge)
+│   ├── integrations/supabase/   # Supabase client & server middleware
+│   ├── lib/
+│   │   ├── aiaic.functions.ts   # Server proxy querying AIAIC endpoints
+│   │   ├── aiaic-types.ts       # Response schemas & confidence logic
+│   │   ├── aiaic-labels.ts      # MP & MH districts, crops, and label mappings
+│   │   ├── catalog.functions.ts # Engine catalog server cache handler
+│   │   ├── i18n.tsx             # Multi-lingual dictionary (EN, HI, MR)
+│   │   └── use-speech.ts        # Audio speech synthesis hook
+│   └── routes/                  # TanStack file-based routes (index, ask, result, advice.$service)
+├── package.json
+├── vite.config.ts
+└── tsconfig.json
+```
+
+---
+
+## 📄 Handover & Review Documentation
+
+- 📄 **Review Packet**: See [`docs/REVIEW_PACKET.md`](file:///c:/Users/Rahil%20Mulani/Downloads/farmer-s-friend-dashboard-main/farmer-s-friend-dashboard-main/docs/REVIEW_PACKET.md) for focused code architecture review.
+- 📋 **Handover Notes**: See [`docs/HANDOVER.md`](file:///c:/Users/Rahil%20Mulani/Downloads/farmer-s-friend-dashboard-main/farmer-s-friend-dashboard-main/docs/HANDOVER.md) for technical implementation details.
+- 🖼️ **Screenshot Evidence**: See [`docs/evidence_packet/`](file:///c:/Users/Rahil%20Mulani/Downloads/farmer-s-friend-dashboard-main/farmer-s-friend-dashboard-main/docs/evidence_packet/) for UI screen verification captures.
+
+---
+
+## ⚖️ License & Attribution
+
+Built for the **AIAIC Platform (Farmer Interface & Decision Dashboard)**. Data provided by **Agmarknet (Directorate of Marketing & Inspection, Ministry of Agriculture & Farmers Welfare, Govt of India)** via `data.gov.in`.
