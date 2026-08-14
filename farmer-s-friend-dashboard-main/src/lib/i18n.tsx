@@ -1,0 +1,523 @@
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+
+export const LANGUAGES = [
+  { code: "en", label: "English" },
+  { code: "hi", label: "हिंदी" },
+  { code: "mr", label: "मराठी" },
+] as const;
+
+export type Lang = (typeof LANGUAGES)[number]["code"];
+
+type Dict = Record<string, string>;
+
+const en: Dict = {
+  "app.name": "AIAIC Kisan",
+  "app.tagline": "Simple farm advice built on real government data",
+  "home.lead":
+    "Tell us your district and your crop. We show what today's real data says — in plain words.",
+  "home.cta": "Get my advice",
+  "home.how": "How it works",
+  "home.step1": "Tell us your district and crop",
+  "home.step2": "We read today's real data",
+  "home.step3": "You see a suggestion, why, and how sure we are",
+  "home.demo.title": "Please read before you use this",
+  "home.demo.body":
+    "This is a demonstration. The advice is not yet checked by farm scientists, so it is a suggestion only — not a guaranteed instruction. Always confirm with your Krishi Vigyan Kendra or a trusted agri officer before spending money.",
+  "lang.title": "Choose your language",
+  "ask.title": "Your farm",
+  "ask.subtitle": "Fill only what you know. You can leave a field empty.",
+  "ask.mandi": "Which market (APMC)?",
+  "ask.mandi.help": "Price advice is calculated for one market at a time",
+  "ask.mandi.any": "All markets",
+  "ask.options.stale":
+    "Could not reach the service, so this list may be out of date. Your choice may return nothing.",
+  "state.unknown.subject": "The service has no data for this district or crop yet.",
+  "advice.unknowns": "What the engine itself says it does not know",
+  "ask.district": "Your district",
+  "ask.district.help": "Only Maharashtra districts have data today",
+  "ask.district.any": "All districts",
+  "ask.crop": "Your crop",
+  "ask.crop.any": "All crops",
+  "ask.land": "Your land size (acres)",
+  "ask.land.help": "Used only to show your advice. Optional.",
+  "ask.services": "What do you want to know?",
+  "ask.services.help": "Choose one or more",
+  "ask.submit": "Show my advice",
+  "ask.back": "Back",
+  "ask.search": "Type to search",
+  "ask.noresults": "No match found",
+  "service.market": "Price and selling",
+  "service.water": "Water",
+  "service.weather": "Weather",
+  "service.crop": "Crop care",
+  "service.storage": "Storing my crop",
+  "result.title": "Your advice today",
+  "result.for": "For",
+  "result.open": "See full details",
+  "result.back": "Change my details",
+  "result.retry": "Try again",
+  "result.loading": "Reading today's data…",
+  "result.count.one": "1 suggestion",
+  "result.empty.title": "No advice for this choice",
+  "result.empty.body":
+    "The service answered, but it has nothing for this district and crop today. Try another district or crop.",
+  "dashboard.title": "Your decision dashboard",
+  "dashboard.summary":
+    "{total} suggestions total. {high} fairly sure, {medium} somewhat sure, {low} not very sure.",
+  "dashboard.empty": "No suggestions or abstentions right now.",
+  "dashboard.updated": "Last updated",
+  "dashboard.jump": "Quick links",
+  "detail.recommendation": "What we suggest",
+  "detail.why": "Why we say this",
+  "detail.why.simple": "In simple words",
+  "detail.why.more": "Show the calculation",
+  "detail.why.less": "Hide the calculation",
+  "detail.evidence": "Where this comes from",
+  "detail.confidence": "How sure are we?",
+  "detail.limits": "What we do not know",
+  "detail.next": "What to do now",
+  "detail.next.body":
+    "Show this screen to your Krishi Vigyan Kendra, FPO or agri officer and ask them to confirm before you act.",
+  "detail.next.call": "Kisan Call Centre 1800-180-1551",
+  "detail.decision": "Reference number",
+  "conf.high": "Fairly sure",
+  "conf.medium": "Somewhat sure",
+  "conf.low": "Not very sure",
+  "conf.unknown": "Sureness not given",
+  "conf.high.body": "Today's data points clearly in this direction.",
+  "conf.medium.body": "The data leans this way, but it can change.",
+  "conf.low.body": "This is a weak signal. Do not act on it alone.",
+  "conf.unknown.body": "The service did not tell us how sure it is. Treat it as unsure.",
+  "conf.uncalibrated": "Not yet checked by farm scientists — this is a suggestion, not an order.",
+  "abstain.title": "No advice given",
+  "abstain.body": "The system chose not to advise here. That is safer than a wrong guess.",
+  "evidence.none": "No source list was provided for this advice. Trust it less.",
+  "evidence.official": "Government source",
+  "evidence.other": "Other source",
+  "evidence.synthetic": "Example data, not real",
+  "evidence.observed": "Data date",
+  "evidence.license": "Licence",
+  "evidence.open": "Open source website",
+  "limits.none": "The service listed no limitations. That does not mean there are none.",
+  "stale.title": "This data is old",
+  "stale.body": "The newest reading is {days} days old. Prices and weather may have changed.",
+  "state.offline.title": "Service not reachable",
+  "state.offline.body":
+    "The AIAIC service is not answering right now. Nothing is being guessed for you. Please try again in some time.",
+  "state.notfound.title": "This district or crop is not supported yet",
+  "state.notfound.body": "Data is available for Maharashtra districts and mandi commodities today.",
+  "state.bad.title": "Answer not understood",
+  "state.bad.body": "The service replied in a form we cannot read. We will not show a guess.",
+  "state.failed.title": "Request failed",
+  "state.failed.body": "Something went wrong on the way. Please try again.",
+  "home.continue": "Continue with my saved farm",
+  "home.review": "Expert review packet",
+  "speak.play": "Listen to this advice",
+  "speak.stop": "Stop reading",
+  "share.button": "Share or print",
+  "share.copied": "Copied. You can paste it in WhatsApp.",
+  "cache.title": "Saved from earlier",
+  "cache.body":
+    "The service is not answering now, so this is the advice saved on this phone on {when}. It may be out of date.",
+  "feedback.title": "Was this useful to you?",
+  "feedback.yes": "Yes, useful",
+  "feedback.no": "Not useful",
+  "feedback.thanks": "Thank you. Your answer has been sent to the team.",
+  "detail.summary": "In one line",
+  "detail.summary.sources.one": "1 data source",
+  "detail.summary.sources": "{count} data sources",
+  "detail.summary.sources.none": "no listed data source",
+  "detail.summary.age.today": "read today",
+  "detail.summary.age.days": "newest reading {days} days old",
+  "detail.summary.age.unknown": "reading date not given",
+  "detail.summary.body":
+    "Based on {sources}, {age}, sureness: {conf}. Not yet checked by farm scientists.",
+  "review.title": "Expert review packet",
+  "review.lead":
+    "Every service response for this query, exactly as the engine returned it — for the agronomist and agricultural-economist review required before any farmer is advised.",
+  "review.copy": "Copy all raw data",
+  "review.copied": "Copied to clipboard",
+  "review.service": "Service",
+  "review.feedback": "Feedback collected on this device",
+  "review.feedback.none": "No feedback recorded on this device yet.",
+  "review.base": "Base URL configured by environment",
+  "review.yes": "Yes",
+  "review.no": "No (using built-in default)",
+  "footer.note": "AIAIC demonstration • real evidence, uncalibrated advice",
+  "plant.title": "Check a plant photo",
+  "plant.lead":
+    "Take a clear photo of one leaf or plant. The system will describe what it can see. It will not tell you which medicine to spray.",
+  "plant.take": "Take or choose a photo",
+  "plant.working": "Looking at your photo…",
+  "plant.photo.alt": "The plant photo you sent",
+  "plant.notconnected.title": "Photo check not connected yet",
+  "plant.notconnected.body":
+    "The plant photo service is not linked to this demonstration yet, so no photo can be checked. Everything else on this screen still works.",
+  "plant.failed.body":
+    "The plant photo service did not answer. Nothing is being guessed about your plant. Please try again later.",
+  "plant.noobservations": "The service looked at the photo but reported nothing it could describe.",
+  "plant.disclaimer":
+    "These are observations only, not a disease diagnosis and not a spray instruction. Show the photo to your Krishi Vigyan Kendra before buying any medicine.",
+  "review.plant": "Last photo check (this device)",
+  "review.plant.none": "No photo has been checked on this device yet.",
+  "review.feedback.shared": "Feedback collected from all farmers",
+  "feedback.thanks.local":
+    "Thank you. Your answer is saved on this device — it could not be sent to the team right now.",
+};
+
+const hi: Dict = {
+  "app.name": "AIAIC किसान",
+  "app.tagline": "सरकारी असली आँकड़ों पर बनी आसान सलाह",
+  "home.lead": "अपना ज़िला और फ़सल बताइए। आज के असली आँकड़े आसान शब्दों में दिखाएँगे।",
+  "home.cta": "मेरी सलाह देखें",
+  "home.how": "यह कैसे काम करता है",
+  "home.step1": "अपना ज़िला और फ़सल बताइए",
+  "home.step2": "हम आज के असली आँकड़े पढ़ते हैं",
+  "home.step3": "आपको सुझाव, कारण और भरोसे का स्तर दिखता है",
+  "home.demo.title": "उपयोग से पहले पढ़ें",
+  "home.demo.body":
+    "यह एक प्रदर्शन है। यह सलाह अभी कृषि वैज्ञानिकों द्वारा जाँची नहीं गई है, इसलिए यह केवल सुझाव है — पक्का आदेश नहीं। पैसा खर्च करने से पहले कृषि विज्ञान केंद्र या भरोसेमंद कृषि अधिकारी से पुष्टि करें।",
+  "lang.title": "अपनी भाषा चुनें",
+  "ask.title": "आपका खेत",
+  "ask.subtitle": "जो पता है वही भरें। कोई खाना खाली भी छोड़ सकते हैं।",
+  "ask.mandi": "कौन सी मंडी (APMC)?",
+  "ask.mandi.help": "भाव की सलाह एक बार में एक ही मंडी के लिए बनती है",
+  "ask.mandi.any": "सभी मंडियाँ",
+  "ask.options.stale":
+    "सेवा से संपर्क नहीं हुआ, इसलिए यह सूची पुरानी हो सकती है। आपके चुनाव पर कुछ न मिले तो आश्चर्य न करें।",
+  "state.unknown.subject": "इस ज़िले या फ़सल के लिए सेवा के पास अभी कोई आँकड़ा नहीं है।",
+  "advice.unknowns": "इंजन ख़ुद क्या नहीं जानता, यह उसने बताया है",
+  "ask.district": "आपका ज़िला",
+  "ask.district.help": "आज केवल महाराष्ट्र के ज़िलों के आँकड़े हैं",
+  "ask.district.any": "सभी ज़िले",
+  "ask.crop": "आपकी फ़सल",
+  "ask.crop.any": "सभी फ़सलें",
+  "ask.land": "ज़मीन का आकार (एकड़)",
+  "ask.land.help": "केवल आपकी सलाह दिखाने के लिए। ज़रूरी नहीं।",
+  "ask.services": "आप क्या जानना चाहते हैं?",
+  "ask.services.help": "एक या अधिक चुनें",
+  "ask.submit": "मेरी सलाह दिखाएँ",
+  "ask.back": "पीछे",
+  "ask.search": "खोजने के लिए लिखें",
+  "ask.noresults": "कुछ नहीं मिला",
+  "service.market": "भाव और बिक्री",
+  "service.water": "पानी",
+  "service.weather": "मौसम",
+  "service.crop": "फ़सल की देखभाल",
+  "service.storage": "फ़सल रखना",
+  "result.title": "आज की आपकी सलाह",
+  "result.for": "किसके लिए",
+  "result.open": "पूरी जानकारी देखें",
+  "result.back": "जानकारी बदलें",
+  "result.retry": "फिर कोशिश करें",
+  "result.loading": "आज के आँकड़े पढ़ रहे हैं…",
+  "result.count.one": "1 सुझाव",
+  "result.empty.title": "इस चुनाव के लिए सलाह नहीं",
+  "result.empty.body":
+    "सेवा ने जवाब दिया, पर आज इस ज़िले और फ़सल के लिए कुछ नहीं है। दूसरा ज़िला या फ़सल चुनें।",
+  "detail.title": "पूरी जानकारी",
+  "detail.recommendation": "हमारा सुझाव",
+  "detail.why": "हम यह क्यों कह रहे हैं",
+  "detail.why.simple": "आसान शब्दों में",
+  "detail.why.more": "हिसाब दिखाएँ",
+  "detail.why.less": "हिसाब छिपाएँ",
+  "detail.evidence": "यह कहाँ से आया",
+  "detail.confidence": "हमें कितना भरोसा है?",
+  "detail.limits": "हमें क्या पता नहीं",
+  "detail.next": "अब क्या करें",
+  "detail.next.body":
+    "यह स्क्रीन अपने कृषि विज्ञान केंद्र, एफपीओ या कृषि अधिकारी को दिखाएँ और काम करने से पहले पुष्टि कराएँ।",
+  "detail.next.call": "किसान कॉल सेंटर 1800-180-1551",
+  "detail.decision": "संदर्भ संख्या",
+  "conf.high": "ठीक-ठाक भरोसा",
+  "conf.medium": "कुछ भरोसा",
+  "conf.low": "कम भरोसा",
+  "conf.unknown": "भरोसा नहीं बताया",
+  "conf.high.body": "आज के आँकड़े साफ़ तौर पर इसी तरफ़ इशारा करते हैं।",
+  "conf.medium.body": "आँकड़े इस तरफ़ झुके हैं, पर बदल सकते हैं।",
+  "conf.low.body": "यह कमज़ोर संकेत है। केवल इस पर काम न करें।",
+  "conf.unknown.body": "सेवा ने भरोसा नहीं बताया। इसे अनिश्चित मानें।",
+  "conf.uncalibrated": "कृषि वैज्ञानिकों द्वारा जाँचा नहीं गया — यह सुझाव है, आदेश नहीं।",
+  "abstain.title": "कोई सलाह नहीं दी गई",
+  "abstain.body": "सिस्टम ने यहाँ सलाह न देना चुना। ग़लत अनुमान से यह सुरक्षित है।",
+  "evidence.none": "इस सलाह के लिए स्रोत नहीं बताए गए। इस पर कम भरोसा करें।",
+  "evidence.official": "सरकारी स्रोत",
+  "evidence.other": "अन्य स्रोत",
+  "evidence.synthetic": "उदाहरण आँकड़े, असली नहीं",
+  "evidence.observed": "आँकड़े की तारीख़",
+  "evidence.license": "लाइसेंस",
+  "evidence.open": "स्रोत वेबसाइट खोलें",
+  "limits.none": "सेवा ने कोई सीमा नहीं बताई। इसका मतलब यह नहीं कि सीमाएँ नहीं हैं।",
+  "stale.title": "ये आँकड़े पुराने हैं",
+  "stale.body": "सबसे नया आँकड़ा {days} दिन पुराना है। भाव और मौसम बदल सकते हैं।",
+  "state.offline.title": "सेवा से संपर्क नहीं",
+  "state.offline.body":
+    "AIAIC सेवा अभी जवाब नहीं दे रही। आपके लिए कोई अनुमान नहीं लगाया जा रहा। कुछ समय बाद कोशिश करें।",
+  "state.notfound.title": "यह ज़िला या फ़सल अभी उपलब्ध नहीं",
+  "state.notfound.body": "आज महाराष्ट्र के ज़िलों और मंडी जिंसों के आँकड़े उपलब्ध हैं।",
+  "state.bad.title": "जवाब समझ नहीं आया",
+  "state.bad.body": "सेवा ने ऐसा जवाब दिया जो हम पढ़ नहीं सकते। हम अनुमान नहीं दिखाएँगे।",
+  "state.failed.title": "अनुरोध विफल",
+  "state.failed.body": "रास्ते में कुछ ग़लत हुआ। फिर कोशिश करें।",
+  "dashboard.title": "आपका निर्णय डैशबोर्ड",
+  "dashboard.summary":
+    "कुल {total} सुझाव। {high} ठीक-ठाक भरोसा, {medium} कुछ भरोसा, {low} कम भरोसा।",
+  "dashboard.empty": "अभी कोई सुझाव या रोक-निर्णय नहीं।",
+  "dashboard.updated": "आखिरी अपडेट",
+  "dashboard.jump": "त्वरित लिंक",
+  "home.continue": "मेरे सहेजे खेत के साथ आगे बढ़ें",
+  "home.review": "विशेषज्ञ समीक्षा पैकेट",
+  "speak.play": "यह सलाह सुनें",
+  "speak.stop": "पढ़ना रोकें",
+  "share.button": "साझा करें या छापें",
+  "share.copied": "कॉपी हो गया। आप इसे व्हाट्सएप में चिपका सकते हैं।",
+  "cache.title": "पहले सहेजी गई सलाह",
+  "cache.body":
+    "सेवा अभी जवाब नहीं दे रही, इसलिए यह {when} को इस फ़ोन में सहेजी गई सलाह है। यह पुरानी हो सकती है।",
+  "feedback.title": "क्या यह आपके काम आया?",
+  "feedback.yes": "हाँ, काम आया",
+  "feedback.no": "काम नहीं आया",
+  "feedback.thanks": "धन्यवाद। आपका उत्तर टीम तक पहुँच गया है।",
+  "detail.summary": "एक पंक्ति में",
+  "detail.summary.sources.one": "1 स्रोत",
+  "detail.summary.sources": "{count} स्रोत",
+  "detail.summary.sources.none": "कोई स्रोत नहीं बताया",
+  "detail.summary.age.today": "आज पढ़ा गया",
+  "detail.summary.age.days": "सबसे नया आँकड़ा {days} दिन पुराना",
+  "detail.summary.age.unknown": "तारीख़ नहीं बताई",
+  "detail.summary.body":
+    "{sources} के आधार पर, {age}, भरोसा: {conf}। कृषि वैज्ञानिकों द्वारा जाँचा नहीं गया।",
+  "review.title": "विशेषज्ञ समीक्षा पैकेट",
+  "review.lead":
+    "इस प्रश्न के लिए हर सेवा का उत्तर, ठीक वैसा ही जैसा इंजन ने दिया — किसान को सलाह देने से पहले आवश्यक कृषि वैज्ञानिक और कृषि अर्थशास्त्री समीक्षा के लिए।",
+  "review.copy": "पूरा कच्चा डेटा कॉपी करें",
+  "review.copied": "कॉपी हो गया",
+  "review.service": "सेवा",
+  "review.feedback": "इस डिवाइस पर जमा प्रतिक्रिया",
+  "review.feedback.none": "इस डिवाइस पर अभी कोई प्रतिक्रिया दर्ज नहीं है।",
+  "review.base": "एनवायरनमेंट से बेस URL तय है",
+  "review.yes": "हाँ",
+  "review.no": "नहीं (अंतर्निहित डिफ़ॉल्ट)",
+  "footer.note": "AIAIC प्रदर्शन • असली प्रमाण, अनजाँची सलाह",
+  "plant.title": "पौधे की फोटो जाँचें",
+  "plant.lead":
+    "एक पत्ते या पौधे की साफ फोटो लें। सिस्टम बताएगा कि उसे क्या दिख रहा है। कौन सी दवा छिड़कें, यह नहीं बताएगा।",
+  "plant.take": "फोटो लें या चुनें",
+  "plant.working": "आपकी फोटो देखी जा रही है…",
+  "plant.photo.alt": "आपने भेजी पौधे की फोटो",
+  "plant.notconnected.title": "फोटो जाँच अभी जुड़ी नहीं है",
+  "plant.notconnected.body":
+    "पौधे की फोटो देखने वाली सेवा अभी इस डेमो से नहीं जुड़ी है, इसलिए फोटो नहीं जाँची जा सकती। बाकी सब काम कर रहा है।",
+  "plant.failed.body":
+    "फोटो सेवा ने जवाब नहीं दिया। आपके पौधे के बारे में कोई अंदाज़ा नहीं लगाया जा रहा। कुछ देर बाद कोशिश करें।",
+  "plant.noobservations": "सेवा ने फोटो देखी, पर बताने लायक कुछ नहीं मिला।",
+  "plant.disclaimer":
+    "ये सिर्फ देखी गई बातें हैं — न रोग की पुष्टि, न दवा का आदेश। दवा खरीदने से पहले कृषि विज्ञान केंद्र को फोटो दिखाएँ।",
+  "review.plant": "पिछली फोटो जाँच (इस फ़ोन पर)",
+  "review.plant.none": "इस फ़ोन पर अभी कोई फोटो जाँची नहीं गई।",
+  "review.feedback.shared": "सभी किसानों से मिली प्रतिक्रिया",
+  "feedback.thanks.local":
+    "धन्यवाद। आपका जवाब इस फ़ोन पर सुरक्षित है — टीम तक अभी नहीं भेजा जा सका।",
+};
+
+const mr: Dict = {
+  "app.name": "AIAIC शेतकरी",
+  "app.tagline": "सरकारी खऱ्या आकडेवारीवर आधारित सोपा सल्ला",
+  "home.lead": "तुमचा जिल्हा आणि पीक सांगा. आजची खरी आकडेवारी सोप्या शब्दांत दाखवतो.",
+  "home.cta": "माझा सल्ला पहा",
+  "home.how": "हे कसे चालते",
+  "home.step1": "तुमचा जिल्हा आणि पीक सांगा",
+  "home.step2": "आम्ही आजची खरी आकडेवारी वाचतो",
+  "home.step3": "तुम्हाला सल्ला, कारण आणि खात्री दिसते",
+  "home.demo.title": "वापरण्यापूर्वी वाचा",
+  "home.demo.body":
+    "हे एक प्रात्यक्षिक आहे. हा सल्ला कृषी शास्त्रज्ञांनी अजून तपासलेला नाही, म्हणून तो फक्त सूचना आहे — खात्रीची आज्ञा नाही. पैसे खर्च करण्यापूर्वी कृषी विज्ञान केंद्र किंवा विश्वासू कृषी अधिकाऱ्याकडून खात्री करा.",
+  "lang.title": "तुमची भाषा निवडा",
+  "ask.title": "तुमचे शेत",
+  "ask.subtitle": "जे माहीत आहे तेच भरा. रिकामे ठेवले तरी चालेल.",
+  "ask.mandi": "कोणती मंडी (APMC)?",
+  "ask.mandi.help": "भावाचा सल्ला एका वेळी एकाच मंडीसाठी काढला जातो",
+  "ask.mandi.any": "सर्व मंडया",
+  "ask.options.stale":
+    "सेवेशी संपर्क झाला नाही, म्हणून ही यादी जुनी असू शकते. तुमच्या निवडीसाठी काही न मिळणे शक्य आहे.",
+  "state.unknown.subject": "या जिल्ह्यासाठी किंवा पिकासाठी सेवेकडे अजून आकडेवारी नाही.",
+  "advice.unknowns": "इंजिनने स्वतः सांगितलेले — त्याला काय माहीत नाही",
+  "ask.district": "तुमचा जिल्हा",
+  "ask.district.help": "आज फक्त महाराष्ट्रातील जिल्ह्यांची आकडेवारी आहे",
+  "ask.district.any": "सर्व जिल्हे",
+  "ask.crop": "तुमचे पीक",
+  "ask.crop.any": "सर्व पिके",
+  "ask.land": "जमिनीचा आकार (एकर)",
+  "ask.land.help": "फक्त तुमचा सल्ला दाखवण्यासाठी. आवश्यक नाही.",
+  "ask.services": "तुम्हाला काय जाणून घ्यायचे आहे?",
+  "ask.services.help": "एक किंवा अधिक निवडा",
+  "ask.submit": "माझा सल्ला दाखवा",
+  "ask.back": "मागे",
+  "ask.search": "शोधण्यासाठी लिहा",
+  "ask.noresults": "काही सापडले नाही",
+  "service.market": "भाव आणि विक्री",
+  "service.water": "पाणी",
+  "service.weather": "हवामान",
+  "service.crop": "पिकाची काळजी",
+  "service.storage": "पीक साठवण",
+  "result.title": "आजचा तुमचा सल्ला",
+  "result.for": "कोणासाठी",
+  "result.open": "पूर्ण माहिती पहा",
+  "result.back": "माहिती बदला",
+  "result.retry": "पुन्हा प्रयत्न करा",
+  "result.loading": "आजची आकडेवारी वाचत आहे…",
+  "result.count.one": "1 सूचना",
+  "result.empty.title": "या निवडीसाठी सल्ला नाही",
+  "result.empty.body":
+    "सेवेने उत्तर दिले, पण आज या जिल्ह्यासाठी आणि पिकासाठी काही नाही. दुसरा जिल्हा किंवा पीक निवडा.",
+  "dashboard.title": "तुमचा निर्णय डॅशबोर्ड",
+  "dashboard.summary":
+    "एकूण {total} सूचना. {high} बऱ्यापैकी खात्री, {medium} काहीशी खात्री, {low} कमी खात्री.",
+  "dashboard.empty": "सध्या कोणतीही सूचना किंवा सल्ला नाही.",
+  "dashboard.updated": "शेवटचा अपडेट",
+  "dashboard.jump": "द्रुत दुवे",
+  "detail.title": "पूर्ण माहिती",
+  "detail.recommendation": "आमची सूचना",
+  "detail.why": "आम्ही असे का म्हणतो",
+  "detail.why.simple": "सोप्या शब्दांत",
+  "detail.why.more": "हिशोब दाखवा",
+  "detail.why.less": "हिशोब लपवा",
+  "detail.evidence": "हे कुठून आले",
+  "detail.confidence": "आम्हाला किती खात्री आहे?",
+  "detail.limits": "आम्हाला काय माहीत नाही",
+  "detail.next": "आता काय करावे",
+  "detail.next.body":
+    "ही स्क्रीन तुमच्या कृषी विज्ञान केंद्र, एफपीओ किंवा कृषी अधिकाऱ्याला दाखवा आणि कृती करण्यापूर्वी खात्री करा.",
+  "detail.next.call": "किसान कॉल सेंटर 1800-180-1551",
+  "detail.decision": "संदर्भ क्रमांक",
+  "conf.high": "बऱ्यापैकी खात्री",
+  "conf.medium": "काहीशी खात्री",
+  "conf.low": "कमी खात्री",
+  "conf.unknown": "खात्री सांगितली नाही",
+  "conf.high.body": "आजची आकडेवारी स्पष्टपणे याच दिशेने आहे.",
+  "conf.medium.body": "आकडेवारी या बाजूने झुकते, पण बदलू शकते.",
+  "conf.low.body": "हा कमकुवत संकेत आहे. फक्त यावर कृती करू नका.",
+  "conf.unknown.body": "सेवेने खात्री सांगितली नाही. अनिश्चित समजा.",
+  "conf.uncalibrated": "कृषी शास्त्रज्ञांनी तपासलेले नाही — ही सूचना आहे, आज्ञा नाही.",
+  "abstain.title": "सल्ला दिलेला नाही",
+  "abstain.body": "प्रणालीने येथे सल्ला न देणे निवडले. चुकीच्या अंदाजापेक्षा हे सुरक्षित आहे.",
+  "evidence.none": "या सल्ल्यासाठी स्रोत दिलेले नाहीत. यावर कमी विश्वास ठेवा.",
+  "evidence.official": "सरकारी स्रोत",
+  "evidence.other": "इतर स्रोत",
+  "evidence.synthetic": "उदाहरण आकडेवारी, खरी नाही",
+  "evidence.observed": "आकडेवारीची तारीख",
+  "evidence.license": "परवाना",
+  "evidence.open": "स्रोत संकेतस्थळ उघडा",
+  "limits.none": "सेवेने कोणतीही मर्यादा सांगितली नाही. मर्यादा नाहीत असे नाही.",
+  "stale.title": "ही आकडेवारी जुनी आहे",
+  "stale.body": "सर्वात नवी नोंद {days} दिवस जुनी आहे. भाव आणि हवामान बदलू शकते.",
+  "state.offline.title": "सेवेशी संपर्क नाही",
+  "state.offline.body":
+    "AIAIC सेवा आत्ता उत्तर देत नाही. तुमच्यासाठी कोणताही अंदाज लावला जात नाही. थोड्या वेळाने प्रयत्न करा.",
+  "state.notfound.title": "हा जिल्हा किंवा पीक अजून उपलब्ध नाही",
+  "state.notfound.body": "आज महाराष्ट्रातील जिल्हे आणि मंडी शेतमालाची आकडेवारी उपलब्ध आहे.",
+  "state.bad.title": "उत्तर समजले नाही",
+  "state.bad.body": "सेवेने असे उत्तर दिले जे आम्ही वाचू शकत नाही. आम्ही अंदाज दाखवणार नाही.",
+  "state.failed.title": "विनंती अयशस्वी",
+  "state.failed.body": "वाटेत काहीतरी चुकले. पुन्हा प्रयत्न करा.",
+  "home.continue": "माझे साठवलेले शेत पुढे चालू ठेवा",
+  "home.review": "तज्ज्ञ तपासणी संच",
+  "speak.play": "हा सल्ला ऐका",
+  "speak.stop": "वाचणे थांबवा",
+  "share.button": "पाठवा किंवा छापा",
+  "share.copied": "कॉपी झाले. तुम्ही ते व्हॉट्सअॅपमध्ये पेस्ट करू शकता.",
+  "cache.title": "आधी साठवलेला सल्ला",
+  "cache.body":
+    "सेवा आत्ता उत्तर देत नाही, म्हणून हा {when} रोजी या फोनमध्ये साठवलेला सल्ला आहे. तो जुना असू शकतो.",
+  "feedback.title": "हे तुमच्या उपयोगी पडले का?",
+  "feedback.yes": "हो, उपयोगी",
+  "feedback.no": "उपयोगी नाही",
+  "feedback.thanks": "धन्यवाद. तुमचे उत्तर टीमपर्यंत पोहोचले आहे.",
+  "detail.summary": "एका ओळीत",
+  "detail.summary.sources.one": "1 स्रोत",
+  "detail.summary.sources": "{count} स्रोत",
+  "detail.summary.sources.none": "कोणताही स्रोत दिलेला नाही",
+  "detail.summary.age.today": "आज वाचले",
+  "detail.summary.age.days": "सर्वात नवी नोंद {days} दिवस जुनी",
+  "detail.summary.age.unknown": "तारीख दिलेली नाही",
+  "detail.summary.body":
+    "{sources} च्या आधारे, {age}, खात्री: {conf}. कृषी शास्त्रज्ञांनी तपासलेले नाही.",
+  "review.title": "तज्ज्ञ तपासणी संच",
+  "review.lead":
+    "या प्रश्नासाठी प्रत्येक सेवेचे उत्तर, इंजिनाने दिले तसेच — शेतकऱ्याला सल्ला देण्यापूर्वी आवश्यक कृषी शास्त्रज्ञ व कृषी अर्थतज्ज्ञ तपासणीसाठी.",
+  "review.copy": "सर्व कच्चा डेटा कॉपी करा",
+  "review.copied": "कॉपी झाले",
+  "review.service": "सेवा",
+  "review.feedback": "या उपकरणावर जमा प्रतिसाद",
+  "review.feedback.none": "या उपकरणावर अजून प्रतिसाद नोंदलेला नाही.",
+  "review.base": "एनव्हायर्नमेंटमधून बेस URL ठरवला आहे",
+  "review.yes": "हो",
+  "review.no": "नाही (अंतर्गत डिफॉल्ट)",
+  "footer.note": "AIAIC प्रात्यक्षिक • खरे पुरावे, अनतपासलेला सल्ला",
+  "plant.title": "झाडाचा फोटो तपासा",
+  "plant.lead":
+    "एका पानाचा किंवा झाडाचा स्पष्ट फोटो काढा. यंत्रणा जे दिसते ते सांगेल. कोणते औषध फवारायचे हे सांगणार नाही.",
+  "plant.take": "फोटो काढा किंवा निवडा",
+  "plant.working": "तुमचा फोटो पाहत आहोत…",
+  "plant.photo.alt": "तुम्ही पाठवलेला झाडाचा फोटो",
+  "plant.notconnected.title": "फोटो तपासणी अजून जोडलेली नाही",
+  "plant.notconnected.body":
+    "झाडाचा फोटो पाहणारी सेवा अजून या प्रात्यक्षिकाला जोडलेली नाही, म्हणून फोटो तपासता येत नाही. बाकी सर्व चालू आहे.",
+  "plant.failed.body":
+    "फोटो सेवेने उत्तर दिले नाही. तुमच्या झाडाबद्दल काहीही अंदाज बांधला जात नाही. नंतर पुन्हा प्रयत्न करा.",
+  "plant.noobservations": "सेवेने फोटो पाहिला, पण सांगण्यासारखे काही आढळले नाही.",
+  "plant.disclaimer":
+    "ही केवळ निरीक्षणे आहेत — रोगाचे निदान नाही आणि फवारणीचा आदेश नाही. औषध घेण्यापूर्वी कृषी विज्ञान केंद्राला फोटो दाखवा.",
+  "review.plant": "शेवटची फोटो तपासणी (या फोनवर)",
+  "review.plant.none": "या फोनवर अजून कोणताही फोटो तपासलेला नाही.",
+  "review.feedback.shared": "सर्व शेतकऱ्यांकडून मिळालेला प्रतिसाद",
+  "feedback.thanks.local":
+    "धन्यवाद. तुमचे उत्तर या फोनवर जतन झाले — टीमपर्यंत आत्ता पाठवता आले नाही.",
+};
+
+const DICTS: Record<Lang, Dict> = { en, hi, mr };
+const STORAGE_KEY = "aiaic.lang";
+
+type I18nValue = {
+  lang: Lang;
+  setLang: (lang: Lang) => void;
+  t: (key: string, vars?: Record<string, string | number>) => string;
+};
+
+const I18nContext = createContext<I18nValue | null>(null);
+
+export function I18nProvider({ children }: { children: ReactNode }) {
+  const [lang, setLangState] = useState<Lang>("en");
+
+  // Read stored preference after hydration so server and client first render match.
+  useEffect(() => {
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    if (stored === "en" || stored === "hi" || stored === "mr") setLangState(stored);
+  }, []);
+
+  const setLang = useCallback((next: Lang) => {
+    setLangState(next);
+    window.localStorage.setItem(STORAGE_KEY, next);
+    document.documentElement.lang = next;
+  }, []);
+
+  const t = useCallback(
+    (key: string, vars?: Record<string, string | number>) => {
+      const template = DICTS[lang][key] ?? en[key] ?? key;
+      if (!vars) return template;
+      return Object.entries(vars).reduce(
+        (acc, [k, v]) => acc.replaceAll(`{${k}}`, String(v)),
+        template,
+      );
+    },
+    [lang],
+  );
+
+  return <I18nContext.Provider value={{ lang, setLang, t }}>{children}</I18nContext.Provider>;
+}
+
+export function useI18n(): I18nValue {
+  const ctx = useContext(I18nContext);
+  if (!ctx) throw new Error("useI18n must be used inside <I18nProvider>");
+  return ctx;
+}
