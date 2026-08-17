@@ -22,7 +22,7 @@ export function RecommendationCard({
   service: Service;
   item: IntelligenceItem;
   index: number;
-  search: { region?: string; crop?: string; land?: string; services?: string };
+  search: { region?: string; crop?: string; mandi?: string; land?: string; services?: string };
 }) {
   const { t, lang } = useI18n();
   const abstained = isAbstention(item);

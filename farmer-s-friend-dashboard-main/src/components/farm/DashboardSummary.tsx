@@ -37,7 +37,7 @@ export function DashboardSummary({
   subject: string;
   land?: string | undefined;
   updatedAt: string;
-  search: { region?: string; crop?: string; land?: string; services?: string };
+  search: { region?: string; crop?: string; mandi?: string; land?: string; services?: string };
 }) {
   const { t, lang } = useI18n();
   const items = flattenResults(results);

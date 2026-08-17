@@ -65,6 +65,7 @@ function ReviewPage() {
   const linkSearch = {
     ...(search.region ? { region: search.region } : {}),
     ...(search.crop ? { crop: search.crop } : {}),
+    ...(search.mandi ? { mandi: search.mandi } : {}),
     ...(search.land ? { land: search.land } : {}),
     services: services.join(","),
   };
