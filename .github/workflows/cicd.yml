@@ -1,0 +1,353 @@
+name: AIAIC Farmers Platform Production CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  validate:
+    name: Validate production deployment
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set GitHub SHA
+        run: echo "short_sha=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+      - name: Generate Compose file for validation
+        run: |
+          sed "s|IMG_TAG|$short_sha|g" docker-compose.production.template.yml > docker-compose.production.yml
+
+      - name: Create stub .env for compose validation
+        run: |
+          touch .env
+
+      - name: Validate Docker Compose configuration
+        run: |
+          docker compose -f docker-compose.production.yml config
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: farmer-s-friend-dashboard-main/package-lock.json
+
+      - name: Install dependencies & validate source code
+        working-directory: farmer-s-friend-dashboard-main
+        run: |
+          npm ci
+          npx tsc --noEmit
+          npm run lint
+
+      - name: Upload deployment artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-artifacts
+          path: |
+            docker-compose.production.template.yml
+
+  build:
+    name: Build production images
+    runs-on: ubuntu-latest
+    needs: validate
+    outputs:
+      sha_short: ${{ steps.vars.outputs.sha_short }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set short git commit SHA
+        id: vars
+        run: echo "sha_short=$(git rev-parse --short=7 HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push aiaic-farmers-platform image
+        env:
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID || 'fhwwpasgebufuznthynv' }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_xTto2I1cQ0IXM3YK83u4vw_IZJeFsol' }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://fhwwpasgebufuznthynv.supabase.co' }}
+          VITE_SUPABASE_PROJECT_ID: ${{ secrets.VITE_SUPABASE_PROJECT_ID || 'fhwwpasgebufuznthynv' }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_xTto2I1cQ0IXM3YK83u4vw_IZJeFsol' }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://fhwwpasgebufuznthynv.supabase.co' }}
+          AIAIC_BASE_URL: ${{ secrets.AIAIC_BASE_URL || 'https://disarm-scrubbed-pushiness.ngrok-free.dev' }}
+          PLANT_BASE_URL: ${{ secrets.PLANT_BASE_URL || '' }}
+        run: |
+          docker buildx build --push \
+            --tag bhiv/aiaic-farmers-platform:${{ steps.vars.outputs.sha_short }} \
+            --tag bhiv/aiaic-farmers-platform:latest \
+            --build-arg SUPABASE_PROJECT_ID="$SUPABASE_PROJECT_ID" \
+            --build-arg SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY" \
+            --build-arg SUPABASE_URL="$SUPABASE_URL" \
+            --build-arg VITE_SUPABASE_PROJECT_ID="$VITE_SUPABASE_PROJECT_ID" \
+            --build-arg VITE_SUPABASE_PUBLISHABLE_KEY="$VITE_SUPABASE_PUBLISHABLE_KEY" \
+            --build-arg VITE_SUPABASE_URL="$VITE_SUPABASE_URL" \
+            --build-arg AIAIC_BASE_URL="$AIAIC_BASE_URL" \
+            --build-arg PLANT_BASE_URL="$PLANT_BASE_URL" \
+            -f Dockerfile .
+
+  deploy:
+    name: Deploy to remote production VM via SSH
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download deployment artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: deployment-artifacts
+
+      - name: Create env files from secrets
+        run: |
+          if [ -n "${{ secrets.AIAIC_ENV_FILE }}" ]; then
+            cat <<'EOF' > .env
+          ${{ secrets.AIAIC_ENV_FILE }}
+          EOF
+          else
+            cat <<'EOF' > .env
+          SUPABASE_PROJECT_ID=${{ secrets.SUPABASE_PROJECT_ID || 'fhwwpasgebufuznthynv' }}
+          SUPABASE_PUBLISHABLE_KEY=${{ secrets.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_xTto2I1cQ0IXM3YK83u4vw_IZJeFsol' }}
+          SUPABASE_URL=${{ secrets.SUPABASE_URL || 'https://fhwwpasgebufuznthynv.supabase.co' }}
+          VITE_SUPABASE_PROJECT_ID=${{ secrets.VITE_SUPABASE_PROJECT_ID || 'fhwwpasgebufuznthynv' }}
+          VITE_SUPABASE_PUBLISHABLE_KEY=${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_xTto2I1cQ0IXM3YK83u4vw_IZJeFsol' }}
+          VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL || 'https://fhwwpasgebufuznthynv.supabase.co' }}
+          AIAIC_BASE_URL=${{ secrets.AIAIC_BASE_URL || 'https://disarm-scrubbed-pushiness.ngrok-free.dev' }}
+          PLANT_BASE_URL=${{ secrets.PLANT_BASE_URL || '' }}
+          AIAIC_PORT=${{ secrets.AIAIC_PORT || '3008' }}
+          EOF
+          fi
+
+      - name: Tar deployment files
+        run: |
+          tar -czf deployment.tar.gz docker-compose.production.template.yml .env
+
+      - name: Install sshpass
+        run: |
+          sudo apt-get update && sudo apt-get install -y sshpass
+
+      - name: Create AIAIC directory on VM
+        run: |
+          sshpass -p "${{ secrets.VM_PASSWORD }}" ssh -p ${{ secrets.VM_PORT }} -o StrictHostKeyChecking=no ${{ secrets.VM_USERNAME }}@${{ secrets.VM_IP }} "mkdir -p ~/AIAIC_FARMERS"
+
+      - name: Copy deployment tarball to VM
+        run: |
+          sshpass -p "${{ secrets.VM_PASSWORD }}" scp -P ${{ secrets.VM_PORT }} -o StrictHostKeyChecking=no deployment.tar.gz ${{ secrets.VM_USERNAME }}@${{ secrets.VM_IP }}:~/AIAIC_FARMERS/deployment.tar.gz
+
+      - name: Deploy production stack on VM
+        run: |
+          sshpass -p "${{ secrets.VM_PASSWORD }}" ssh -p ${{ secrets.VM_PORT }} -o StrictHostKeyChecking=no ${{ secrets.VM_USERNAME }}@${{ secrets.VM_IP }} "bash -s" << 'EOF'
+            set -euo pipefail
+            cd ~/AIAIC_FARMERS
+            
+            # Clean directory first, preserving docs folder (Release History) and current tarball
+            find . -mindepth 1 ! -name docs ! -path './docs/*' ! -name deployment.tar.gz -exec rm -rf {} +
+            
+            # Extract deployment archive and clean up tarball
+            tar -xzf deployment.tar.gz
+            rm -f deployment.tar.gz
+            
+            # Confirm Docker availability
+            docker version
+            docker compose version
+            
+            # Log in to Docker Hub on the VM for authenticated pulls
+            echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+            
+            # Restore persistent Release History if available
+            mkdir -p docs
+            if [ -f /var/tmp/AIAIC_FARMERS/RELEASE_HISTORY.md ]; then
+              cp /var/tmp/AIAIC_FARMERS/RELEASE_HISTORY.md docs/RELEASE_HISTORY.md
+            fi
+            
+            # Generate target compose file by substituting image tag
+            sed "s|IMG_TAG|${{ needs.build.outputs.sha_short }}|g" docker-compose.production.template.yml > docker-compose.production.yml
+            
+            # Validate compose config before deploy
+            docker compose -f docker-compose.production.yml config
+            
+            # Pull new production images
+            docker compose -f docker-compose.production.yml pull
+            
+            # Log out from Docker Hub to secure credentials on VM
+            docker logout
+
+            # Deploy production stack
+            docker compose -f docker-compose.production.yml up -d --remove-orphans
+            
+            # Verify deployment status
+            docker compose -f docker-compose.production.yml ps
+            
+            # Health Check - Wait for container and mapped port (default 3008) to respond
+            echo "Waiting for AIAIC Farmers Platform to be healthy..."
+            for i in {1..12}; do
+              if docker compose -f docker-compose.production.yml ps --filter "status=running" --filter "health=unhealthy" -q >/dev/null 2>&1; then
+                UNHEALTHY_COUNT=$(docker compose -f docker-compose.production.yml ps --filter "status=running" --filter "health=unhealthy" -q | wc -l)
+                STARTING_COUNT=$(docker compose -f docker-compose.production.yml ps --filter "status=running" --filter "health=starting" -q | wc -l)
+              else
+                UNHEALTHY_COUNT=0
+                STARTING_COUNT=0
+              fi
+              
+              CONTAINER_PORT=$(grep -E 'AIAIC_PORT=' .env | cut -d '=' -f2 || echo "3008")
+              CONTAINER_PORT=${CONTAINER_PORT:-3008}
+              
+              PLATFORM_HEALTH=0
+              curl -sf http://localhost:${CONTAINER_PORT}/ > /dev/null && PLATFORM_HEALTH=1
+              
+              if [ "$UNHEALTHY_COUNT" -eq 0 ] && [ "$STARTING_COUNT" -eq 0 ] && [ "$PLATFORM_HEALTH" -eq 1 ]; then
+                echo "AIAIC Farmers Platform container and port are healthy!"
+                break
+              fi
+              
+              if [ "$i" -eq 12 ]; then
+                echo "Health check failed!"
+                docker compose -f docker-compose.production.yml ps
+                docker compose -f docker-compose.production.yml logs --tail=50
+                exit 1
+              fi
+              
+              echo "Status: $STARTING_COUNT starting, $UNHEALTHY_COUNT unhealthy, http_check=$PLATFORM_HEALTH. Retrying in 10s..."
+              sleep 10
+            done
+            
+            # Prune old images while preserving recently built ones (last 7 days / 168 hours)
+            docker image prune -af --filter "until=168h"
+          EOF
+
+      - name: Update Release Documentation on Success
+        if: success()
+        run: |
+          sshpass -p "${{ secrets.VM_PASSWORD }}" ssh -p ${{ secrets.VM_PORT }} -o StrictHostKeyChecking=no ${{ secrets.VM_USERNAME }}@${{ secrets.VM_IP }} "bash -s" << 'EOF'
+            set -euo pipefail
+            cd ~/AIAIC_FARMERS
+            if [ ! -f docs/RELEASE_HISTORY.md ]; then
+              mkdir -p docs
+              echo "# Release History and Deployment Registry" > docs/RELEASE_HISTORY.md
+              echo "" >> docs/RELEASE_HISTORY.md
+              echo "| Timestamp | Image Tag (Git SHA) | Status | Description |" >> docs/RELEASE_HISTORY.md
+              echo "|---|---|---|---|" >> docs/RELEASE_HISTORY.md
+            fi
+            echo "| $(date -u +'%Y-%m-%d %H:%M:%S UTC') | ${{ needs.build.outputs.sha_short }} | SUCCESS | Stable deployment |" >> docs/RELEASE_HISTORY.md
+          EOF
+
+      - name: Save persistent Release History
+        if: always()
+        run: |
+          sshpass -p "${{ secrets.VM_PASSWORD }}" ssh -p ${{ secrets.VM_PORT }} -o StrictHostKeyChecking=no ${{ secrets.VM_USERNAME }}@${{ secrets.VM_IP }} "bash -s" << 'EOF'
+            set -euo pipefail
+            cd ~/AIAIC_FARMERS
+            if [ -f docs/RELEASE_HISTORY.md ]; then
+              mkdir -p /var/tmp/AIAIC_FARMERS
+              cp docs/RELEASE_HISTORY.md /var/tmp/AIAIC_FARMERS/RELEASE_HISTORY.md
+            fi
+          EOF
+
+  rollback:
+    name: Rollback on deployment failure
+    needs: [build, deploy]
+    if: always() && needs.deploy.result == 'failure'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install sshpass
+        run: |
+          sudo apt-get update && sudo apt-get install -y sshpass
+
+      - name: Automatic Rollback on Failure
+        run: |
+          sshpass -p "${{ secrets.VM_PASSWORD }}" ssh -p ${{ secrets.VM_PORT }} -o StrictHostKeyChecking=no ${{ secrets.VM_USERNAME }}@${{ secrets.VM_IP }} "bash -s" << 'EOF'
+            set -euo pipefail
+            cd ~/AIAIC_FARMERS
+            
+            # Robust parsing of Release History to extract the last healthy 7-character hexadecimal SHA
+            if [ -f docs/RELEASE_HISTORY.md ] && grep -qE "SUCCESS|ROLLBACK_SUCCESS" docs/RELEASE_HISTORY.md; then
+              LAST_HEALTHY_TAG=$(grep -E "SUCCESS|ROLLBACK_SUCCESS" docs/RELEASE_HISTORY.md | tail -n 1 | awk -F '|' '{
+                for(i=1; i<=NF; i++) {
+                  gsub(/[[:space:]]/, "", $i);
+                  if ($i ~ /^[0-9a-f]{7}$/) {
+                    print $i;
+                    exit;
+                  }
+                }
+              }')
+              
+              if [ -z "$LAST_HEALTHY_TAG" ]; then
+                echo "⚠️ No last healthy tag extracted from Release History. Cannot perform automatic rollback."
+                exit 1
+              fi
+              
+              echo "🚨 Deployment failed! Rolling back to last healthy tag: $LAST_HEALTHY_TAG"
+              
+              sed "s|IMG_TAG|$LAST_HEALTHY_TAG|g" docker-compose.production.template.yml > docker-compose.production.yml
+              
+              echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+              docker compose -f docker-compose.production.yml pull
+              docker logout
+              
+              docker compose -f docker-compose.production.yml up -d --remove-orphans
+              docker compose -f docker-compose.production.yml ps
+              
+              echo "Waiting for rollback services to be healthy..."
+              for i in {1..12}; do
+                if docker compose -f docker-compose.production.yml ps --filter "status=running" --filter "health=unhealthy" -q >/dev/null 2>&1; then
+                  UNHEALTHY_COUNT=$(docker compose -f docker-compose.production.yml ps --filter "status=running" --filter "health=unhealthy" -q | wc -l)
+                  STARTING_COUNT=$(docker compose -f docker-compose.production.yml ps --filter "status=running" --filter "health=starting" -q | wc -l)
+                else
+                  UNHEALTHY_COUNT=0
+                  STARTING_COUNT=0
+                fi
+                
+                CONTAINER_PORT=$(grep -E 'AIAIC_PORT=' .env | cut -d '=' -f2 || echo "3008")
+                CONTAINER_PORT=${CONTAINER_PORT:-3008}
+                
+                PLATFORM_HEALTH=0
+                curl -sf http://localhost:${CONTAINER_PORT}/ > /dev/null && PLATFORM_HEALTH=1
+                
+                if [ "$UNHEALTHY_COUNT" -eq 0 ] && [ "$STARTING_COUNT" -eq 0 ] && [ "$PLATFORM_HEALTH" -eq 1 ]; then
+                  echo "Rollback deployment is healthy!"
+                  echo "| $(date -u +'%Y-%m-%d %H:%M:%S UTC') | $LAST_HEALTHY_TAG | ROLLBACK_SUCCESS | Rollback from failed ${{ needs.build.outputs.sha_short }} is healthy |" >> docs/RELEASE_HISTORY.md
+                  exit 0
+                fi
+                
+                if [ "$i" -eq 12 ]; then
+                  echo "Rollback health check failed!"
+                  echo "| $(date -u +'%Y-%m-%d %H:%M:%S UTC') | $LAST_HEALTHY_TAG | ROLLBACK_FAILED | Rollback from failed ${{ needs.build.outputs.sha_short }} failed health check |" >> docs/RELEASE_HISTORY.md
+                  exit 1
+                fi
+                
+                echo "Status: $STARTING_COUNT starting, $UNHEALTHY_COUNT unhealthy, http_check=$PLATFORM_HEALTH. Retrying in 10s..."
+                sleep 10
+              done
+            else
+              echo "⚠️ No last healthy tag found in Release History. Cannot perform automatic rollback."
+              if [ ! -f docs/RELEASE_HISTORY.md ]; then
+                mkdir -p docs
+                echo "# Release History and Deployment Registry" > docs/RELEASE_HISTORY.md
+                echo "" >> docs/RELEASE_HISTORY.md
+                echo "| Timestamp | Image Tag (Git SHA) | Status | Description |" >> docs/RELEASE_HISTORY.md
+                echo "|---|---|---|---|" >> docs/RELEASE_HISTORY.md
+              fi
+              echo "| $(date -u +'%Y-%m-%d %H:%M:%S UTC') | ${{ needs.build.outputs.sha_short }} | FAILED | Deployment failed and no rollback tag was available |" >> docs/RELEASE_HISTORY.md
+              exit 1
+            fi
+          EOF
+
+      - name: Save persistent Release History
+        if: always()
+        run: |
+          sshpass -p "${{ secrets.VM_PASSWORD }}" ssh -p ${{ secrets.VM_PORT }} -o StrictHostKeyChecking=no ${{ secrets.VM_USERNAME }}@${{ secrets.VM_IP }} "bash -s" << 'EOF'
+            set -euo pipefail
+            cd ~/AIAIC_FARMERS
+            if [ -f docs/RELEASE_HISTORY.md ]; then
+              mkdir -p /var/tmp/AIAIC_FARMERS
+              cp docs/RELEASE_HISTORY.md /var/tmp/AIAIC_FARMERS/RELEASE_HISTORY.md
+            fi
+          EOF

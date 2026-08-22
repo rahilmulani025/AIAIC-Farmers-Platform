@@ -1,0 +1,38 @@
+services:
+  aiaic-farmers-platform:
+    image: bhiv/aiaic-farmers-platform:IMG_TAG
+    container_name: aiaic_farmers_platform
+    restart: unless-stopped
+    ports:
+      - "${AIAIC_PORT:-3008}:3000"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOST=0.0.0.0
+      - SUPABASE_PROJECT_ID=${SUPABASE_PROJECT_ID}
+      - SUPABASE_PUBLISHABLE_KEY=${SUPABASE_PUBLISHABLE_KEY}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - VITE_SUPABASE_PROJECT_ID=${VITE_SUPABASE_PROJECT_ID}
+      - VITE_SUPABASE_PUBLISHABLE_KEY=${VITE_SUPABASE_PUBLISHABLE_KEY}
+      - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+      - AIAIC_BASE_URL=${AIAIC_BASE_URL}
+      - PLANT_BASE_URL=${PLANT_BASE_URL}
+    networks:
+      - aiaic-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  aiaic-network:
+    driver: bridge
