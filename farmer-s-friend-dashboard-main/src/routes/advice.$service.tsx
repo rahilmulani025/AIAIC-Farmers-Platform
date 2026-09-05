@@ -114,11 +114,7 @@ function AdviceDetail() {
           <StateBlock
             icon={SearchX}
             title={t("result.empty.title")}
-            body={
-              serviceSupport.anyUnknown
-                ? t("state.unknown.subject")
-                : t("result.empty.body")
-            }
+            body={serviceSupport.anyUnknown ? t("state.unknown.subject") : t("result.empty.body")}
           />
         ) : (
           <ItemDetail item={item} service={service} farm={search} />
