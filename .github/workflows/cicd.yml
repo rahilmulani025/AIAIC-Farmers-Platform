@@ -28,19 +28,17 @@ jobs:
         run: |
           docker compose -f docker-compose.production.yml config
 
-      - name: Set up Node.js 22
-        uses: actions/setup-node@v4
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 22
-          cache: 'npm'
-          cache-dependency-path: farmer-s-friend-dashboard-main/package-lock.json
+          bun-version: latest
 
       - name: Install dependencies & validate source code
         working-directory: farmer-s-friend-dashboard-main
         run: |
-          npm ci
-          npx tsc --noEmit
-          npm run lint
+          bun install --frozen-lockfile
+          bunx tsc --noEmit
+          bun run lint
 
       - name: Upload deployment artifacts
         uses: actions/upload-artifact@v4
