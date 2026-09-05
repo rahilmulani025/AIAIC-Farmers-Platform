@@ -6,15 +6,15 @@
 # ------------------------------------------------------------------------------
 # Stage 1: Build Image
 # ------------------------------------------------------------------------------
-FROM node:22-alpine AS build
+FROM oven/bun:1-alpine AS build
 
 WORKDIR /app
 
 # Copy dependency specifications
-COPY farmer-s-friend-dashboard-main/package*.json ./
+COPY farmer-s-friend-dashboard-main/package.json farmer-s-friend-dashboard-main/bun.lock ./
 
-# Clean install all dependencies (including build tools & Vite plugins)
-RUN npm ci
+# Clean install all dependencies using Bun lockfile
+RUN bun install --frozen-lockfile
 
 # Copy full application source code
 COPY farmer-s-friend-dashboard-main/ ./
@@ -42,7 +42,7 @@ ENV SUPABASE_PROJECT_ID=$SUPABASE_PROJECT_ID \
     NODE_ENV=production
 
 # Build the production standalone SSR bundle (.output/)
-RUN npm run build
+RUN bun run build
 
 # ------------------------------------------------------------------------------
 # Stage 2: Minimal Production Runtime
