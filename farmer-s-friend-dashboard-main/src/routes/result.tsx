@@ -186,9 +186,7 @@ function ResultPage() {
               <StateBlock
                 icon={SearchX}
                 title={t("result.empty.title")}
-                body={
-                  support.anyUnknown ? t("state.unknown.subject") : t("result.empty.body")
-                }
+                body={support.anyUnknown ? t("state.unknown.subject") : t("result.empty.body")}
                 action={retryButton}
               />
             ) : null}
@@ -209,9 +207,7 @@ function ResultPage() {
                   options,
                   {
                     region:
-                      result.service === "market" && search.mandi
-                        ? search.mandi
-                        : search.region,
+                      result.service === "market" && search.mandi ? search.mandi : search.region,
                     crop: search.crop,
                   },
                   result.service,
