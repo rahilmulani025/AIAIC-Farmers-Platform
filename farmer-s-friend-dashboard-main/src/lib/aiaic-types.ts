@@ -49,13 +49,32 @@ export type IntelligenceItem = z.infer<typeof intelligenceItemSchema>;
  * optional and defaults to an empty list so a changed payload degrades to the
  * built-in fallback lists instead of an error.
  */
+export const perServiceItemSchema = z.object({
+  crops: z.number().optional(),
+  regions: z.number().optional(),
+  crop_list: z.array(z.string()).default([]),
+  region_list: z.array(z.string()).default([]),
+});
+
+export type PerServiceItem = z.infer<typeof perServiceItemSchema>;
+
 export const catalogSchema = z.object({
   services: z.array(z.string()).default([]),
   crops: z.array(z.string()).default([]),
   regions: z.array(z.string()).default([]),
   market_mandis: z.array(z.string()).default([]),
-  // Counts per service, e.g. { market: { crops: 90 } }.
-  per_service: z.record(z.string(), z.record(z.string(), z.number())).optional(),
+  // Counts and valid crops/regions per service
+  per_service: z
+    .record(
+      z.string(),
+      z.object({
+        crops: z.number().optional(),
+        regions: z.number().optional(),
+        crop_list: z.array(z.string()).default([]),
+        region_list: z.array(z.string()).default([]),
+      }),
+    )
+    .optional(),
   uncalibrated: z.boolean().optional(),
 });
 

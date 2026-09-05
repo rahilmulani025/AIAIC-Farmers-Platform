@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -27,7 +27,7 @@ export function BigSelect({
   onChange: (value: string) => void;
 }) {
   const { t } = useI18n();
-  const show = display ?? ((v: string) => v);
+  const show = useCallback((v: string) => (display ? display(v) : v), [display]);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 

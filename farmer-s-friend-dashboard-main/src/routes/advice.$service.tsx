@@ -14,6 +14,7 @@ import { adviceText, summaryLine } from "@/lib/advice-text";
 import { isTechnicalLine, recommendationLabel } from "@/lib/aiaic-labels";
 import { SERVICE_ICON } from "@/lib/service-icons";
 import { farmSearchSchema, intelligenceQueryOptions, parseServices } from "@/lib/aiaic-query";
+import { catalogOptions, catalogQueryOptions, subjectSupport } from "@/lib/catalog-query";
 import {
   confidenceLevel,
   daysOld,
@@ -61,6 +62,17 @@ function AdviceDetail() {
   const query = useQuery(intelligenceQueryOptions(search));
   const services = parseServices(search.services);
 
+  const catalogQuery = useQuery(catalogQueryOptions());
+  const options = catalogOptions(catalogQuery.data);
+  const serviceSupport = subjectSupport(
+    options,
+    {
+      region: service === "market" && search.mandi ? search.mandi : search.region,
+      crop: search.crop,
+    },
+    service,
+  );
+
   const ServiceIcon = SERVICE_ICON[service];
   const backSearch = {
     ...(search.region ? { region: search.region } : {}),
@@ -102,7 +114,11 @@ function AdviceDetail() {
           <StateBlock
             icon={SearchX}
             title={t("result.empty.title")}
-            body={t("result.empty.body")}
+            body={
+              serviceSupport.anyUnknown
+                ? t("state.unknown.subject")
+                : t("result.empty.body")
+            }
           />
         ) : (
           <ItemDetail item={item} service={service} farm={search} />

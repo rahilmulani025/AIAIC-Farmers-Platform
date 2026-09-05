@@ -1,11 +1,16 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { BigSelect } from "@/components/farm/BigSelect";
 import { Check, WifiOff } from "lucide-react";
 
-import { catalogOptions, catalogQueryOptions, displayName } from "@/lib/catalog-query";
+import {
+  catalogOptions,
+  catalogQueryOptions,
+  displayName,
+  getFilteredOptions,
+} from "@/lib/catalog-query";
 import { SERVICE_ICON } from "@/lib/service-icons";
 import { farmSearchSchema, parseServices } from "@/lib/aiaic-query";
 import { SERVICES, type Service } from "@/lib/aiaic-types";
@@ -45,9 +50,13 @@ function AskPage() {
   const [selected, setSelected] = useState<Service[]>(parseServices(search.services));
 
   // Valid districts, crops and APMC markets come from the engine's own catalog;
-  // the built-in lists are only a fallback when the service is unreachable.
+  // dropdown options are filtered to the selected service(s) from per_service.
   const catalogQuery = useQuery(catalogQueryOptions());
   const options = catalogOptions(catalogQuery.data);
+  const activeOptions = useMemo(
+    () => getFilteredOptions(options, selected.length > 0 ? selected : options.services),
+    [options, selected],
+  );
 
   // Prefill from the saved farm (browser-only, so after hydration) unless the
   // URL already carries a choice.
@@ -108,7 +117,7 @@ function AskPage() {
           label={t("ask.district")}
           help={t("ask.district.help")}
           anyLabel={t("ask.district.any")}
-          options={options.regions}
+          options={activeOptions.regions}
           display={displayName}
           value={region}
           onChange={setRegion}
@@ -117,7 +126,7 @@ function AskPage() {
         <BigSelect
           label={t("ask.crop")}
           anyLabel={t("ask.crop.any")}
-          options={options.crops}
+          options={activeOptions.crops}
           display={displayName}
           value={crop}
           onChange={setCrop}
@@ -128,7 +137,7 @@ function AskPage() {
             label={t("ask.mandi")}
             help={t("ask.mandi.help")}
             anyLabel={t("ask.mandi.any")}
-            options={options.mandis}
+            options={activeOptions.mandis}
             display={displayName}
             value={mandi}
             onChange={setMandi}

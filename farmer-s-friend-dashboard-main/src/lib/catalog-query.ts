@@ -1,7 +1,14 @@
 import { queryOptions } from "@tanstack/react-query";
 
 import { CROPS, DISTRICTS, MANDIS } from "./aiaic-labels";
-import { SERVICES, isService, type Catalog, type CatalogResult, type Service } from "./aiaic-types";
+import {
+  SERVICES,
+  isService,
+  type Catalog,
+  type CatalogResult,
+  type PerServiceItem,
+  type Service,
+} from "./aiaic-types";
 import { getCatalog } from "./catalog.functions";
 
 export const catalogQueryOptions = () =>
@@ -19,6 +26,7 @@ export type CatalogOptions = {
   crops: string[];
   mandis: string[];
   services: Service[];
+  perService?: Record<string, PerServiceItem> | undefined;
   uncalibrated: boolean;
 };
 
@@ -33,7 +41,54 @@ export function catalogOptions(result: CatalogResult | undefined): CatalogOption
     crops: catalog?.crops?.length ? catalog.crops : [...CROPS],
     mandis: catalog?.market_mandis?.length ? catalog.market_mandis : [...MANDIS],
     services: services.length ? services : [...SERVICES],
+    perService: catalog?.per_service,
     uncalibrated: catalog?.uncalibrated === true,
+  };
+}
+
+/**
+ * Derives valid dropdown options (regions, crops, mandis) for one or more services
+ * from `per_service[service].crop_list` and `region_list`, avoiding union pollution across services.
+ */
+export function getFilteredOptions(
+  options: CatalogOptions,
+  selectedServices?: Service[] | Service,
+): { regions: string[]; crops: string[]; mandis: string[] } {
+  const list: Service[] = !selectedServices
+    ? options.services
+    : Array.isArray(selectedServices)
+      ? selectedServices.length > 0
+        ? selectedServices
+        : options.services
+      : [selectedServices];
+
+  if (!options.live || !options.perService) {
+    return {
+      regions: options.regions,
+      crops: options.crops,
+      mandis: options.mandis,
+    };
+  }
+
+  const regionSet = new Set<string>();
+  const cropSet = new Set<string>();
+
+  for (const s of list) {
+    const entry = options.perService[s];
+    if (entry) {
+      for (const r of entry.region_list ?? []) {
+        if (r && r.trim()) regionSet.add(r.trim());
+      }
+      for (const c of entry.crop_list ?? []) {
+        if (c && c.trim()) cropSet.add(c.trim());
+      }
+    }
+  }
+
+  return {
+    regions: regionSet.size > 0 ? Array.from(regionSet) : options.regions,
+    crops: cropSet.size > 0 ? Array.from(cropSet) : options.crops,
+    mandis: options.mandis,
   };
 }
 
@@ -48,21 +103,40 @@ export function displayName(value: string): string {
 const norm = (v: string) => v.trim().toLowerCase();
 
 /**
- * Whether the engine's catalog knows this subject. An unknown region or crop
- * comes back as an empty `[]` with HTTP 200, so knowing this lets us say
+ * Whether the engine's catalog knows this subject for a specific service or overall.
+ * An unknown region or crop comes back as an empty `[]` with HTTP 200, so knowing this lets us say
  * "the engine has no data for this district/crop" instead of "nothing today".
  */
 export function subjectSupport(
   options: CatalogOptions,
   subject: { region?: string | undefined; crop?: string | undefined },
+  service?: Service,
 ): { regionKnown: boolean; cropKnown: boolean; anyUnknown: boolean } {
   const region = subject.region?.trim();
   const crop = subject.crop?.trim();
+
+  if (!options.live) {
+    return { regionKnown: true, cropKnown: true, anyUnknown: false };
+  }
+
+  if (service && options.perService && options.perService[service]) {
+    const sEntry = options.perService[service];
+    const sRegions = sEntry.region_list?.length ? sEntry.region_list : options.regions;
+    const sCrops = sEntry.crop_list?.length ? sEntry.crop_list : options.crops;
+
+    const regionKnown =
+      !region ||
+      sRegions.some((r) => norm(r) === norm(region)) ||
+      (service === "market" && options.mandis.some((m) => norm(m) === norm(region)));
+    const cropKnown = !crop || sCrops.some((c) => norm(c) === norm(crop));
+
+    return { regionKnown, cropKnown, anyUnknown: !regionKnown || !cropKnown };
+  }
+
   const regionKnown =
     !region ||
-    !options.live ||
     options.regions.some((r) => norm(r) === norm(region)) ||
     options.mandis.some((m) => norm(m) === norm(region));
-  const cropKnown = !crop || !options.live || options.crops.some((c) => norm(c) === norm(crop));
+  const cropKnown = !crop || options.crops.some((c) => norm(c) === norm(crop));
   return { regionKnown, cropKnown, anyUnknown: !regionKnown || !cropKnown };
 }

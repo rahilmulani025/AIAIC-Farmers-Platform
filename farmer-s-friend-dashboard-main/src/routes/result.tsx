@@ -39,10 +39,9 @@ function ResultPage() {
   const services = parseServices(search.services);
   const query = useQuery(intelligenceQueryOptions(search));
 
-  // An unknown district or crop comes back as an empty list with HTTP 200, so we
-  // check the engine's catalog to say honestly which kind of "nothing" this is.
   const catalogQuery = useQuery(catalogQueryOptions());
-  const support = subjectSupport(catalogOptions(catalogQuery.data), {
+  const options = catalogOptions(catalogQuery.data);
+  const support = subjectSupport(options, {
     region: search.mandi ?? search.region,
     crop: search.crop,
   });
@@ -183,6 +182,17 @@ function ResultPage() {
               <FailureBlock reason="request_failed" action={retryButton} />
             ) : null}
 
+            {!showCached && !query.isError && results.length === 0 ? (
+              <StateBlock
+                icon={SearchX}
+                title={t("result.empty.title")}
+                body={
+                  support.anyUnknown ? t("state.unknown.subject") : t("result.empty.body")
+                }
+                action={retryButton}
+              />
+            ) : null}
+
             {results.map((result) => {
               if (!result.ok) {
                 return (
@@ -195,6 +205,17 @@ function ResultPage() {
                 );
               }
               if (result.items.length === 0) {
+                const serviceSupport = subjectSupport(
+                  options,
+                  {
+                    region:
+                      result.service === "market" && search.mandi
+                        ? search.mandi
+                        : search.region,
+                    crop: search.crop,
+                  },
+                  result.service,
+                );
                 return (
                   <section key={result.service} aria-label={t(`service.${result.service}`)}>
                     <h2 className="mb-2 text-lg font-bold uppercase tracking-wide text-muted-foreground">
@@ -204,7 +225,9 @@ function ResultPage() {
                       icon={SearchX}
                       title={t("result.empty.title")}
                       body={
-                        support.anyUnknown ? t("state.unknown.subject") : t("result.empty.body")
+                        serviceSupport.anyUnknown
+                          ? t("state.unknown.subject")
+                          : t("result.empty.body")
                       }
                     />
                   </section>
